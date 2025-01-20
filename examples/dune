@@ -1,0 +1,9 @@
+(executable
+ (public_name print_record_batch)
+ (name print_record_batch)
+ (libraries arrow))
+
+(executable
+ (public_name write_back_record_batch)
+ (name write_back_record_batch)
+ (libraries arrow))

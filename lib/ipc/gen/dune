@@ -1,0 +1,4 @@
+(library
+ (name arrow_ipc_gen)
+ (public_name arrow.ipc.gen)
+ (libraries flatbuffers))

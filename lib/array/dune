@@ -1,0 +1,5 @@
+(include_subdirs no)
+(library
+ (name arrow_array)
+ (public_name arrow.array)
+ (libraries arrow.buffer arrow.data arrow.schema))

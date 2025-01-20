@@ -1,2 +1,5 @@
+(include_subdirs unqualified)
 (library
- (name arrow))
+ (name arrow)
+ (public_name arrow)
+ (libraries arrow.ipc))

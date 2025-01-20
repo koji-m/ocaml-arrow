@@ -5,11 +5,11 @@
 (generate_opam_files true)
 
 (source
- (github username/reponame))
+ (github koji-m/ocaml-arrow))
 
-(authors "Author Name <author@example.com>")
+(authors "Koji Matsumoto <otomustam.ijok@gmail.com>")
 
-(maintainers "Maintainer Name <maintainer@example.com>")
+(maintainers "Koji Matsumoto <otomustam.ijok@gmail.com>")
 
 (license LICENSE)
 
@@ -19,7 +19,12 @@
  (name arrow)
  (synopsis "A short synopsis")
  (description "A longer description")
- (depends ocaml)
+ (depends
+    (ocaml (>= 4.13))
+    (alcotest :with-test)
+    zarith
+    flatbuffers
+    (cppo (and :build (>= 1.1.0))))
  (tags
   ("add topics" "to describe" your project)))
 

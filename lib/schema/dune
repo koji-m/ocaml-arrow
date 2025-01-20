@@ -1,0 +1,5 @@
+(include_subdirs no)
+(library
+ (name arrow_schema)
+ (public_name arrow.schema)
+ (libraries arrow.ipc.gen))
