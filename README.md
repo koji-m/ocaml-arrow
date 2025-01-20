@@ -2,9 +2,9 @@
 A native OCaml library that implements the Apache Arrow columnar memory format.
 This library provides a high-performance, memory-efficient way to work with columnar data in OCaml without relying on bindings to any other language implementations of Apache Arrow.
 
-[!NOTE]
-This project is currently in an experimental stage.
-To run some examples, follows the instructions below.
+> [!NOTE]
+> This project is currently in an experimental stage.
+> To run some examples, follows the instructions below.
 
 ## Building
 
