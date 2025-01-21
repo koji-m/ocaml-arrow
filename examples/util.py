@@ -17,11 +17,20 @@ def write_batch():
     writer.write_batch(batch)
     writer.close()
 
+def read_batch_from_file():
+    with open("example.arrow", "rb") as f:
+        reader = pa.ipc.open_file(f)
+        print(reader.read_pandas())
+
 if __name__ == "__main__":
-    if sys.argv[1] == "write":
+    arg = sys.argv[1]
+    if arg == "write":
         # write RecordBatch with two int32 columns to stdout
         write_batch()
-    else:
+    elif arg == "read":
         # read RecordBatch from stdin
         read_batch()
+    elif arg == "read_file":
+        # read RecordBatch from file
+        read_batch_from_file()
 

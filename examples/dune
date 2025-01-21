@@ -7,3 +7,8 @@
  (public_name write_back_record_batch)
  (name write_back_record_batch)
  (libraries arrow))
+
+(executable
+ (public_name write_record_batch_to_file)
+ (name write_record_batch_to_file)
+ (libraries arrow))
