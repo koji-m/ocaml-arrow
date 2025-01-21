@@ -351,6 +351,18 @@ let write filename (arrow_data : ArrowData.t) =
     in
     write_ arrow_data 0
 
+let build_schema_message out_arrow_data batch = 
+    let ipc_message, arrow_data = Message.schema_to_bytes (Record_batch.schema batch) in
+    write_message ipc_message arrow_data out_arrow_data
+
+let build_record_batch_message out_arrow_data batch =
+    let ipc_message, arrow_data = record_batch_to_bytes batch in
+    write_message ipc_message arrow_data out_arrow_data
+
+let append_eos_bytes out_arrow_data =    
+    let eos_bytes = continuation_bytes 0l in
+    ArrowData.append out_arrow_data eos_bytes
+
 module StreamWriter = struct
   type t = {
     writer : Writer.t;
@@ -363,16 +375,9 @@ module StreamWriter = struct
   let write sw batch =
     let out_arrow_data = ArrowData.create () in
 
-    (* write schema message *)
-    let ipc_message, arrow_data = Message.schema_to_bytes (Record_batch.schema batch) in
-    let _metadata_size, _arrow_data_size = write_message ipc_message arrow_data out_arrow_data in
-    (* write record batch message *)
-    let ipc_message, arrow_data = record_batch_to_bytes batch in
-    let _metadata_size, _arrow_data_size = write_message ipc_message arrow_data out_arrow_data in
-    (* write EOS bytes *)
-    let eos_bytes = continuation_bytes 0l in
-    let () = ArrowData.append out_arrow_data eos_bytes in
-    (* write ipc message to stream *)
+    let _metadata_size, _arrow_data_size = build_schema_message out_arrow_data batch in
+    let _metadata_size, _arrow_data_size = build_record_batch_message out_arrow_data batch in
+    let () = append_eos_bytes out_arrow_data in
     let rec write_ arrow_data wrote =
         match ArrowData.next arrow_data with
         | Some buf ->
