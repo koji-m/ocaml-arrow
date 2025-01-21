@@ -13,8 +13,9 @@ module Writer = struct
 
   let create fd = { fd = fd }
 
-  let write_exact wrtr b =
-    let len = Bytes.length b in
+  let write_exact wrtr buf =
+    let len = Buffer.length buf in
+    let b = Buffer.to_bytes buf in
     Unix.write wrtr.fd b 0 len
 end
 
@@ -163,7 +164,6 @@ let reencode_offset offsets (array_data : Array_data.t) =
             in
         let () = iter_i32 new_offsets in
         new_offsets in
-    let () = print_int (Int32.to_int end_offset) in
     (offsets, Int32.to_int start_offset, Int32.to_int (Int32.sub end_offset start_offset))
 
 let get_value_buffers array_data =
@@ -207,7 +207,6 @@ let rec write_array_data (array_data : Array_data.t) buffers arrow_data nodes of
     let offset, arrow_data, buffers = write_buffer null_buffer buffers arrow_data offset compression_codec alignment in
     let offset, arrow_data, buffers, nodes = match array_data.data_type with
     | Datatype.Int32 -> 
-        let () = Printf.printf "\nwriting Int32\n" in
         let buffer = array_data.buffers.(0) in
         let layout = layout array_data.data_type in
         let spec = layout.buffers.(0) in
@@ -240,7 +239,6 @@ let rec write_array_data (array_data : Array_data.t) buffers arrow_data nodes of
             (fun (offset, arrow_data, buffers, nodes) child ->
                 let num_rows = Array_data.length child in
                 let null_count = Array_data.null_count child in
-                let () = Printf.printf "\nwriting struct child: %d, %d\n" num_rows null_count in
                 write_array_data child buffers arrow_data nodes offset num_rows null_count compression_codec alignment)
             (offset, arrow_data, buffers, nodes)
             array_data.child_data
@@ -264,13 +262,10 @@ let record_batch_to_bytes (batch : Record_batch.t) =
         let null_count = match A.nulls arr with
         | Some null_buf -> Null_buffer.null_count null_buf
         | None -> 0 in
-        let () = print_string "null-count: "; print_int null_count; print_char '\n' in
         let array_data = A.to_data arr in
         write_array_data array_data buffers arrow_data nodes offset num_rows null_count compression_codec alignment
     in
     let _, arrow_data, buffers, nodes = Array.fold_left write_array (0L, ArrowData.create (), [||], [||]) batch.columns in
-    let () = Printf.printf "arrow_data.buffer.len: %d" (Queue.length arrow_data.buffers) in
-    let () = Printf.printf "Nodes length: %d" (Array.length nodes) in
 
     let buffers = FbMessage.Buffer.Vector.create b buffers  in
     let nodes = FbMessage.FieldNode.Vector.create b nodes in
@@ -339,18 +334,6 @@ let to_footer_bytes (batch : Record_batch.t) (record_block : int * int * int) =
         len = Bytes.length fb_bytes;
     })
 
-let write filename (arrow_data : ArrowData.t) =
-    let fd = Unix.(openfile filename [O_WRONLY; O_CREAT; O_TRUNC] 0o644) in
-    let rec write_ arrow_data wrote =
-        match ArrowData.next arrow_data with
-        | Some buf ->
-            let len = Buffer.length buf in
-            let n = Unix.write fd (Buffer.to_bytes buf) 0 len in
-            write_ arrow_data wrote + n
-        | None -> wrote
-    in
-    write_ arrow_data 0
-
 let build_schema_message out_arrow_data batch = 
     let ipc_message, arrow_data = Message.schema_to_bytes (Record_batch.schema batch) in
     write_message ipc_message arrow_data out_arrow_data
@@ -362,6 +345,13 @@ let build_record_batch_message out_arrow_data batch =
 let append_eos_bytes out_arrow_data =    
     let eos_bytes = continuation_bytes 0l in
     ArrowData.append out_arrow_data eos_bytes
+
+let build_footer out_arrow_data batch record_block =
+    let footer_bytes = to_footer_bytes batch record_block in
+    let footer_size_bytes = Buffer.create 4 in
+    Buffer.length footer_bytes |> Int32.of_int |> Buffer.set_int32 footer_size_bytes 0;
+    ArrowData.append out_arrow_data footer_bytes;
+    ArrowData.append out_arrow_data footer_size_bytes
 
 module StreamWriter = struct
   type t = {
@@ -381,7 +371,49 @@ module StreamWriter = struct
     let rec write_ arrow_data wrote =
         match ArrowData.next arrow_data with
         | Some buf ->
-            let n = Writer.write_exact sw.writer (Buffer.to_bytes buf) in
+            let n = Writer.write_exact sw.writer buf in
+            write_ arrow_data wrote + n
+        | None -> wrote
+    in
+    write_ out_arrow_data 0
+end
+
+module FileWriter = struct
+  type t = {
+    writer : Writer.t;
+  }
+
+  exception SchemaError
+
+  let create writer = {writer = writer}
+
+  let write fw batch =
+    let out_arrow_data = ArrowData.create () in
+
+    (* write magic and padding *)
+    let arrow_magic = Buffer.({data = ref arrow_magic; offset = 0; len = Bytes.length arrow_magic}) in
+    let magic_pad_len = pad_to_alignment 8 (Buffer.length arrow_magic) in
+    let () = ArrowData.append out_arrow_data arrow_magic in
+    ArrowData.append out_arrow_data (ArrowData.pad magic_pad_len);
+    let header_size = Buffer.length arrow_magic + magic_pad_len in
+
+    let metadata_size, arrow_data_size = build_schema_message out_arrow_data batch in
+    let block_offset = metadata_size + arrow_data_size + header_size in
+
+    let metadata_size, arrow_data_size = build_record_batch_message out_arrow_data batch in
+    let record_block = (block_offset, metadata_size, arrow_data_size) in
+
+    let () = append_eos_bytes out_arrow_data in
+
+    build_footer out_arrow_data batch record_block;
+
+    (* write magic *)
+    ArrowData.append out_arrow_data arrow_magic;
+
+    let rec write_ arrow_data wrote =
+        match ArrowData.next arrow_data with
+        | Some buf ->
+            let n = Writer.write_exact fw.writer buf in
             write_ arrow_data wrote + n
         | None -> wrote
     in
