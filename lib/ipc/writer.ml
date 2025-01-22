@@ -13,48 +13,16 @@ module Writer = struct
 
   let create fd = { fd = fd }
 
-  let write_exact wrtr buf =
-    let len = Buffer.length buf in
-    let b = Buffer.to_bytes buf in
+  let write_exact wrtr b =
+    let len = Bytes.length b in
     Unix.write wrtr.fd b 0 len
 end
 
-let arrow_magic = Bytes.of_string "ARROW1"
+let arrow_magic = Dynarray.of_array [|'A'; 'R'; 'R'; 'O'; 'W'; '1'|]
+let continuation = Dynarray.make 4 '\xff'
 let pad_to_alignment alignment len =
     let a = alignment - 1 in
     ((len + a) land (lnot a)) - len
-
-module ArrowData = struct
-    type t = {buffers : Buffer.t Queue.t; len : int ref}
-
-    let pad_array = Bytes.make 64 '\x00'
-
-    let append arrow_data b =
-        let l = Buffer.length b in
-        Queue.push b arrow_data.buffers;
-        arrow_data.len := !(arrow_data.len) + l
-
-    let next a =
-        try
-            Some (Queue.pop a.buffers)
-        with Queue.Empty -> None
-    
-    let remove a =
-        let buf = Queue.pop a.buffers in
-        a.len := !(a.len) - Buffer.length buf;
-        buf
-
-    let rec move to_arrow_data from_arrow_data =
-        if !(from_arrow_data.len) < 1 then
-            ()
-        else
-            let () = append to_arrow_data (remove from_arrow_data) in
-            move to_arrow_data from_arrow_data
-
-    let create () = {buffers = Queue.create (); len = ref 0}
-    let length arrow_data = !(arrow_data.len)
-    let pad i = Buffer.({data = ref pad_array; offset = 0; len = i})
-end
 
 module File = struct
     let schema_to_fb_offset schema b =
@@ -91,12 +59,8 @@ module Message = struct (* ToDo: same implementation as Schema.File. need to be 
         ) in
         let fb_bytes = FbMessage.Message.finish_buf Flatbuffers.Primitives.Bytes ~size_prefixed:false b message in
         (
-            Buffer.({
-                data = ref (fb_bytes);
-                offset = 0;
-                len = Bytes.length fb_bytes;
-            }),
-            ArrowData.create ()
+            (Bytes.to_seq fb_bytes |> Dynarray.of_seq),
+            Dynarray.create ()
         )
 end
 
@@ -191,12 +155,13 @@ let get_children array_data =
 
 
 let write_buffer buffer buffers arrow_data offset _compression_codec alignment =
-    let () = ArrowData.append arrow_data buffer in 
+    let buf_data = Buffer.to_bytes buffer |> Bytes.to_seq |> Dynarray.of_seq in
+    let () = Dynarray.append arrow_data buf_data in 
     let len = Buffer.length buffer in
     let buffers = Array.append buffers [|(offset, Int64.of_int len)|] in
     let pad_len = pad_to_alignment alignment len in
-    let () = ArrowData.append arrow_data (ArrowData.pad pad_len) in
-    (Int64.add offset (Int64.of_int (len + pad_len)), arrow_data, buffers)
+    let () = Dynarray.append arrow_data (Dynarray.make pad_len '\x00') in
+    (Int64.add offset (Int64.of_int (len + pad_len)), buffers)
 
 let rec write_array_data (array_data : Array_data.t) buffers arrow_data nodes offset num_rows null_count compression_codec alignment =
     let nodes = Array.append nodes [|(Int64.of_int num_rows, Int64.of_int null_count)|] in
@@ -204,8 +169,8 @@ let rec write_array_data (array_data : Array_data.t) buffers arrow_data nodes of
         | Some null_buffer -> Null_buffer.as_buffer null_buffer
         | None -> Buffer.create ~init:'\xff' (Bit_util.ceil num_rows 8)
     in
-    let offset, arrow_data, buffers = write_buffer null_buffer buffers arrow_data offset compression_codec alignment in
-    let offset, arrow_data, buffers, nodes = match array_data.data_type with
+    let offset, buffers = write_buffer null_buffer buffers arrow_data offset compression_codec alignment in
+    let offset, buffers, nodes = match array_data.data_type with
     | Datatype.Int32 -> 
         let buffer = array_data.buffers.(0) in
         let layout = layout array_data.data_type in
@@ -219,36 +184,36 @@ let rec write_array_data (array_data : Array_data.t) buffers arrow_data nodes of
         else
             buffer
         in
-        let offset, arrow_data, buffers = write_buffer buffer_to_write buffers arrow_data offset compression_codec alignment in
-        offset, arrow_data, buffers, nodes
+        let offset, buffers = write_buffer buffer_to_write buffers arrow_data offset compression_codec alignment in
+        offset, buffers, nodes
     | Datatype.Utf8 ->
         let value_buffers = get_value_buffers array_data in
-        let acc = (offset, arrow_data, buffers) in
-        let offset, arrow_data, buffers = List.fold_left (fun (offset, arrow_data, buffers) vb ->
+        let acc = (offset, buffers) in
+        let offset, buffers = List.fold_left (fun (offset, buffers) vb ->
             write_buffer vb buffers arrow_data offset compression_codec alignment) acc value_buffers in
-        offset, arrow_data, buffers, nodes
+        offset, buffers, nodes
     | Datatype.List _ ->
         let offsets, child = get_offsets_and_child array_data in
-        let offset, arrow_data, buffers = write_buffer offsets buffers arrow_data offset compression_codec alignment in
+        let offset, buffers = write_buffer offsets buffers arrow_data offset compression_codec alignment in
         let num_rows = Array_data.length child in
         let null_count = Array_data.null_count child in
-        let offset, arrow_data, buffers, nodes = write_array_data child buffers arrow_data nodes offset num_rows null_count compression_codec alignment in
-        offset, arrow_data, buffers, nodes
+        let offset, buffers, nodes = write_array_data child buffers arrow_data nodes offset num_rows null_count compression_codec alignment in
+        offset, buffers, nodes
     | Datatype.Struct _ ->
         Array.fold_left
-            (fun (offset, arrow_data, buffers, nodes) child ->
+            (fun (offset, buffers, nodes) child ->
                 let num_rows = Array_data.length child in
                 let null_count = Array_data.null_count child in
                 write_array_data child buffers arrow_data nodes offset num_rows null_count compression_codec alignment)
-            (offset, arrow_data, buffers, nodes)
+            (offset, buffers, nodes)
             array_data.child_data
     | Datatype.Boolean ->
         let buffer = array_data.buffers.(0) in
         let buffer = Bit_util.bit_sub buffer (Array_data.offset array_data) (Array_data.length array_data) in
-        let offset, arrow_data, buffers = write_buffer buffer buffers arrow_data offset compression_codec alignment in
-        offset, arrow_data, buffers, nodes
+        let offset, buffers = write_buffer buffer buffers arrow_data offset compression_codec alignment in
+        offset, buffers, nodes
     in
-    (offset, arrow_data, buffers, nodes)
+    (offset, buffers, nodes)
 
 let record_batch_to_bytes (batch : Record_batch.t) =
     let b = FbMessageRt.Builder.create () in
@@ -256,7 +221,8 @@ let record_batch_to_bytes (batch : Record_batch.t) =
     let compression_codec = Some "LZ4" in
     let alignment = 64 in
 
-    let write_array (offset, arrow_data, buffers, nodes) (column : Array_intf.t) =
+    let arrow_data = Dynarray.create () in
+    let write_array (offset, buffers, nodes) (column : Array_intf.t) =
         let Array_intf.Array((module A), arr) = column in
         let num_rows = A.length arr in
         let null_count = match A.nulls arr with
@@ -265,13 +231,13 @@ let record_batch_to_bytes (batch : Record_batch.t) =
         let array_data = A.to_data arr in
         write_array_data array_data buffers arrow_data nodes offset num_rows null_count compression_codec alignment
     in
-    let _, arrow_data, buffers, nodes = Array.fold_left write_array (0L, ArrowData.create (), [||], [||]) batch.columns in
+    let _, buffers, nodes = Array.fold_left write_array (0L, [||], [||]) batch.columns in
 
     let buffers = FbMessage.Buffer.Vector.create b buffers  in
     let nodes = FbMessage.FieldNode.Vector.create b nodes in
 
     let batch_num_rows = Record_batch.num_rows batch |> Int64.of_int in
-    let arrow_data_len = ArrowData.length arrow_data |> Int64.of_int in
+    let arrow_data_len = Dynarray.length arrow_data |> Int64.of_int in
     let record_batch = FbMessage.RecordBatch.Builder.(
         start b
         |> add_length batch_num_rows
@@ -289,29 +255,28 @@ let record_batch_to_bytes (batch : Record_batch.t) =
     ) in
     let fb_bytes = FbMessage.Message.finish_buf Flatbuffers.Primitives.Bytes ~size_prefixed:false b message in
     (
-        Buffer.({
-            data = ref fb_bytes;
-            offset = 0;
-            len = Bytes.length fb_bytes;
-        }),
+        (Bytes.to_seq fb_bytes |> Dynarray.of_seq),
         arrow_data
     )
 
-let write_message (ipc_message : Buffer.t) (arrow_data : ArrowData.t) (out_arrow_data : ArrowData.t) =
+let write_message (ipc_message : char Dynarray.t) (body : char Dynarray.t) (arrow_data : char Dynarray.t) =
     let metadata_size_size = 8 in
     let a = 8 - 1 in
-    let ipc_message_size = Buffer.length ipc_message in
+    let ipc_message_size = Dynarray.length ipc_message in
     let aligned_metadata_size = (ipc_message_size + metadata_size_size + a) land (lnot a) in
     let ipc_padding_bytes = aligned_metadata_size - ipc_message_size - metadata_size_size in 
-    let prefix_array = continuation_bytes (Int32.of_int (aligned_metadata_size - metadata_size_size)) in
-    let arrow_data_length = ArrowData.length arrow_data in
-    let arrow_padding_bytes = pad_to_alignment 8 arrow_data_length in
-    let () = ArrowData.append out_arrow_data prefix_array;
-    ArrowData.append out_arrow_data ipc_message;
-    ArrowData.append out_arrow_data (Buffer.create ipc_padding_bytes);
-    ArrowData.move out_arrow_data arrow_data;
-    ArrowData.append out_arrow_data (Buffer.create arrow_padding_bytes) in
-    (aligned_metadata_size, arrow_data_length + arrow_padding_bytes)
+    let metadata_size_bytes = Bytes.create 4 in
+    let () = Bytes.set_int32_le metadata_size_bytes 0 (Int32.of_int (aligned_metadata_size - metadata_size_size)) in
+    let metadata_size = Bytes.to_seq metadata_size_bytes |> Dynarray.of_seq in
+    let body_length = Dynarray.length body in
+    let body_padding_bytes = pad_to_alignment 8 body_length in
+    Dynarray.append arrow_data continuation;
+    Dynarray.append arrow_data metadata_size;
+    Dynarray.append arrow_data ipc_message;
+    Dynarray.append arrow_data (Dynarray.make ipc_padding_bytes '\x00');
+    Dynarray.append arrow_data body;
+    Dynarray.append arrow_data (Dynarray.make body_padding_bytes '\x00');
+    (aligned_metadata_size, body_length + body_padding_bytes)
 
 let to_footer_bytes (batch : Record_batch.t) (record_block : int * int * int) =
     let offset, metadata_size, arrow_data_size = record_block in
@@ -328,30 +293,26 @@ let to_footer_bytes (batch : Record_batch.t) (record_block : int * int * int) =
         |> finish
     ) in
     let fb_bytes = FbFile.Footer.finish_buf Flatbuffers.Primitives.Bytes ~size_prefixed:false b footer in
-    Buffer.({
-        data = ref fb_bytes;
-        offset = 0;
-        len = Bytes.length fb_bytes;
-    })
+    Bytes.to_seq fb_bytes |> Dynarray.of_seq
 
-let build_schema_message out_arrow_data batch = 
-    let ipc_message, arrow_data = Message.schema_to_bytes (Record_batch.schema batch) in
-    write_message ipc_message arrow_data out_arrow_data
+let build_schema_message arrow_data batch = 
+    let ipc_message, message_body = Message.schema_to_bytes (Record_batch.schema batch) in
+    write_message ipc_message message_body arrow_data
 
-let build_record_batch_message out_arrow_data batch =
-    let ipc_message, arrow_data = record_batch_to_bytes batch in
-    write_message ipc_message arrow_data out_arrow_data
+let build_record_batch_message arrow_data batch =
+    let ipc_message, message_body = record_batch_to_bytes batch in
+    write_message ipc_message message_body arrow_data
 
-let append_eos_bytes out_arrow_data =    
-    let eos_bytes = continuation_bytes 0l in
-    ArrowData.append out_arrow_data eos_bytes
+let append_eos_bytes arrow_data =    
+    Dynarray.append arrow_data (Dynarray.make 4 '\xff');
+    Dynarray.append arrow_data (Dynarray.make 4 '\x00')
 
-let build_footer out_arrow_data batch record_block =
+let build_footer arrow_data batch record_block =
     let footer_bytes = to_footer_bytes batch record_block in
-    let footer_size_bytes = Buffer.create 4 in
-    Buffer.length footer_bytes |> Int32.of_int |> Buffer.set_int32 footer_size_bytes 0;
-    ArrowData.append out_arrow_data footer_bytes;
-    ArrowData.append out_arrow_data footer_size_bytes
+    let footer_size_bytes = Bytes.create 4 in
+    Dynarray.length footer_bytes |> Int32.of_int |> Bytes.set_int32_le footer_size_bytes 0;
+    Dynarray.append arrow_data footer_bytes;
+    Dynarray.append arrow_data (Bytes.to_seq footer_size_bytes |> Dynarray.of_seq)
 
 module StreamWriter = struct
   type t = {
@@ -363,19 +324,12 @@ module StreamWriter = struct
   let create writer = {writer = writer}
   
   let write sw batch =
-    let out_arrow_data = ArrowData.create () in
+    let arrow_data = Dynarray.create () in
 
-    let _metadata_size, _arrow_data_size = build_schema_message out_arrow_data batch in
-    let _metadata_size, _arrow_data_size = build_record_batch_message out_arrow_data batch in
-    let () = append_eos_bytes out_arrow_data in
-    let rec write_ arrow_data wrote =
-        match ArrowData.next arrow_data with
-        | Some buf ->
-            let n = Writer.write_exact sw.writer buf in
-            write_ arrow_data wrote + n
-        | None -> wrote
-    in
-    write_ out_arrow_data 0
+    let _metadata_size, _arrow_data_size = build_schema_message arrow_data batch in
+    let _metadata_size, _arrow_data_size = build_record_batch_message arrow_data batch in
+    let () = append_eos_bytes arrow_data in
+    Dynarray.to_seq arrow_data |> Bytes.of_seq |> Writer.write_exact sw.writer
 end
 
 module FileWriter = struct
@@ -388,34 +342,27 @@ module FileWriter = struct
   let create writer = {writer = writer}
 
   let write fw batch =
-    let out_arrow_data = ArrowData.create () in
+    let arrow_data = Dynarray.create () in
 
     (* write magic and padding *)
-    let arrow_magic = Buffer.({data = ref arrow_magic; offset = 0; len = Bytes.length arrow_magic}) in
-    let magic_pad_len = pad_to_alignment 8 (Buffer.length arrow_magic) in
-    let () = ArrowData.append out_arrow_data arrow_magic in
-    ArrowData.append out_arrow_data (ArrowData.pad magic_pad_len);
-    let header_size = Buffer.length arrow_magic + magic_pad_len in
+    let magic_len = Dynarray.length arrow_magic in
+    let magic_pad_len = pad_to_alignment 8 magic_len in
+    let () = Dynarray.append arrow_data arrow_magic in
+    Dynarray.append arrow_data (Dynarray.make magic_pad_len '\x00');
+    let header_size = magic_len + magic_pad_len in
 
-    let metadata_size, arrow_data_size = build_schema_message out_arrow_data batch in
+    let metadata_size, arrow_data_size = build_schema_message arrow_data batch in
     let block_offset = metadata_size + arrow_data_size + header_size in
 
-    let metadata_size, arrow_data_size = build_record_batch_message out_arrow_data batch in
+    let metadata_size, arrow_data_size = build_record_batch_message arrow_data batch in
     let record_block = (block_offset, metadata_size, arrow_data_size) in
 
-    let () = append_eos_bytes out_arrow_data in
+    let () = append_eos_bytes arrow_data in
 
-    build_footer out_arrow_data batch record_block;
+    build_footer arrow_data batch record_block;
 
     (* write magic *)
-    ArrowData.append out_arrow_data arrow_magic;
+    Dynarray.append arrow_data arrow_magic;
 
-    let rec write_ arrow_data wrote =
-        match ArrowData.next arrow_data with
-        | Some buf ->
-            let n = Writer.write_exact fw.writer buf in
-            write_ arrow_data wrote + n
-        | None -> wrote
-    in
-    write_ out_arrow_data 0
+    Dynarray.to_seq arrow_data |> Bytes.of_seq |> Writer.write_exact fw.writer
 end
