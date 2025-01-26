@@ -1,16 +1,26 @@
 open Arrow_schema
 
-type t = {buffer : Buffer.t; native_type :Native_type.t}
+module Scalar_buffer (Apt : Arrow_primitive_types.Arrow_primitive_type) = struct
+  type t = {buffer : Buffer.t}
 
-exception Ill_typed
+  exception Ill_typed
 
-let of_buffer b t =
-  let native_t = match t with
-  | Datatype.Int32 -> Native_type.Int32
-  | _ -> raise Ill_typed
-  in
-  {buffer = b; native_type = native_t}
-let length b = Buffer.length b.buffer / Native_type.size_of b.native_type
+  let create n =
+      let len = n * Apt.byte_width in
+      let buf = Buffer.create len in
+      {buffer = buf}
 
-let get_int32 b i =
-  Buffer.get_int32 b.buffer (i * 4)
+  let of_buffer b =
+    {buffer = b}
+
+  let length b = Buffer.length b.buffer / Apt.byte_width
+
+  let get b i =
+    let byte_width = Apt.byte_width in
+    Buffer.sub b.buffer ~off:(i * byte_width) ~len:byte_width |> Buffer.to_bytes
+
+  let set b offset byts =
+    let offset = offset * Apt.byte_width in
+    Bytes.iteri
+      (fun i c -> Buffer.set b.buffer (offset + i) c) byts
+end

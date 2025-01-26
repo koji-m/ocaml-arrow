@@ -37,18 +37,6 @@ module Array_reader = struct
     
 end
 
-let create_primitive_array node data_type_ buffers =
-  let len, _ = node in
-  let null_buffer = Null_buffer.of_buffer buffers.(0) (Int64.to_int len) 0  in
-  match data_type_ with
-  | Datatype.Int32 ->
-    Primitive_array.({
-      data_type = data_type_;
-      values = Scalar_buffer.of_buffer buffers.(1) data_type_;
-      nulls = Some null_buffer;
-    })
-  | _ -> raise NotSupported
-
 let create_array reader field =
   let data_type = Field.type_ field in
   match data_type with
@@ -62,11 +50,9 @@ let create_array reader field =
     let node = match Array_reader.next_node reader with
     | Some node -> node
     | _ -> raise (Unexpected "node not found") in
-    let arr = create_primitive_array
-      node
-      data_type
-      [| null_buffer; data_buffer |] in
-    Array_intf.Array((module Primitive_array), arr)
+    let len, _ = node in
+    let arr = Primitive_array.Int32_array.make (Int64.to_int len) data_buffer null_buffer in
+    Array_intf.Array((module Primitive_array.Int32_array), arr)
   | _ -> raise NotSupported
 
 let read_record_batch buf (b, rb) ver schema_ =

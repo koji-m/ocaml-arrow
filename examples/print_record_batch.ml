@@ -2,7 +2,7 @@ let print_i32_record_batch batch =
   let cols = Arrow_array.Record_batch.columns batch in
   Array.iter
     (fun col ->
-      let i32_array = Arrow_array.Primitive_array.(of_array col |> to_int32_array) in
+      let i32_array = Arrow_array.Primitive_array.Int32_array.(as_array col |> to_array) in
       Printf.printf "i32_array: [\n";
       Array.iter
         (fun i ->

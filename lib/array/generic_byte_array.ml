@@ -2,6 +2,8 @@ open Arrow_buffer
 open Arrow_data
 open Arrow_schema
 
+module Offset_buffer = Offset_buffer.Offset_buffer(Arrow_primitive_types.Int32_type)
+
 type t = {
   data_type : Datatype.t;
   value_offsets : Offset_buffer.t;

@@ -1,4 +1,4 @@
-let i32_array = Arrow_array.Primitive_array.of_int32_array [|Some 1l; None; Some 3l; Some 4l |] in
+let i32_array = Arrow_array.Primitive_array.Int32_array.of_array [|Some 1l; None; Some 3l; Some 4l |] in
 let str_array = Arrow_array.Generic_byte_array.of_string_array [| Some "apple"; None; Some "orange"; Some "banana" |] in
 let i32_list_array = Arrow_array.Generic_list_array.of_int32_array_array [|
     Some [| Some 10l; Some 20l; None; Some 40l |];
@@ -11,8 +11,8 @@ let struct_fields = [|
     Arrow_schema.Schema.Field.({type_ = Arrow_schema.Datatype.Int32; name = "struct_num2"});
 |] in
 let field_arrays = [|
-    Arrow_array.Array_intf.Array((module Arrow_array.Primitive_array), Arrow_array.Primitive_array.of_int32_array [| Some 10l; Some 20l; None; Some 40l |]);
-    Arrow_array.Array_intf.Array((module Arrow_array.Primitive_array), Arrow_array.Primitive_array.of_int32_array [| Some 100l; None; Some 300l; Some 400l |]);
+    Arrow_array.Array_intf.Array((module Arrow_array.Primitive_array.Int32_array), Arrow_array.Primitive_array.Int32_array.of_array [| Some 10l; Some 20l; None; Some 40l |]);
+    Arrow_array.Array_intf.Array((module Arrow_array.Primitive_array.Int32_array), Arrow_array.Primitive_array.Int32_array.of_array [| Some 100l; None; Some 300l; Some 400l |]);
 |] in
 let nulls = None in
 let struct_array = Arrow_array.Struct_array.make struct_fields field_arrays nulls in
@@ -27,8 +27,8 @@ let batch = Arrow_array.Record_batch.({schema = {
         {type_ = Arrow_schema.Datatype.Boolean; name = "bool1"};
     |]};
     columns = [|
-        Arrow_array.Array_intf.Array((module Arrow_array.Primitive_array), i32_array);
-        Arrow_array.Array_intf.Array((module Arrow_array.Primitive_array), i32_array);
+        Arrow_array.Array_intf.Array((module Arrow_array.Primitive_array.Int32_array), i32_array);
+        Arrow_array.Array_intf.Array((module Arrow_array.Primitive_array.Int32_array), i32_array);
         Arrow_array.Array_intf.Array((module Arrow_array.Generic_byte_array), str_array);
         Arrow_array.Array_intf.Array((module Arrow_array.Generic_list_array), i32_list_array);
         Arrow_array.Array_intf.Array((module Arrow_array.Struct_array), struct_array);

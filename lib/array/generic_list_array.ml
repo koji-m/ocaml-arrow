@@ -2,6 +2,8 @@ open Arrow_buffer
 open Arrow_data
 open Arrow_schema
 
+module Offset_buffer = Offset_buffer.Offset_buffer(Arrow_primitive_types.Int32_type)
+
 type t = {
   data_type : Datatype.t;
   value_offsets : Offset_buffer.t;
@@ -14,13 +16,13 @@ let of_int32_array_array aa =
     let offsets = Array.map (fun a -> match a with Some a -> Array.length a | None -> 0) aa
         |> Offset_buffer.from_length in
     let values = Array.fold_left (fun acc a -> match a with Some a -> Array.append acc a | None -> acc) [||] aa
-        |> Primitive_array.of_int32_array in
+        |> Primitive_array.Int32_array.of_array in
     let nulls = Null_buffer.create num_slots in
     Array.iteri (fun i a -> match a with Some _ -> Null_buffer.set nulls i | None -> ()) aa;
     {
         data_type = Datatype.List Field.({type_ = Datatype.Int32; name = "inner"});
         value_offsets = offsets;
-        values = Array_intf.Array((module Primitive_array), values);
+        values = Array_intf.Array((module Primitive_array.Int32_array), values);
         nulls = Some nulls;
     }
 
