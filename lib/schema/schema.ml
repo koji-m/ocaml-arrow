@@ -6,6 +6,7 @@ module FbFile = Arrow_ipc_gen.File.Org.Apache.Arrow.Flatbuf
 module rec Datatype : sig
     type t =
         | Int32
+        | Float64
         | Boolean
         | Utf8
         | List of Field.t
@@ -15,6 +16,7 @@ module rec Datatype : sig
 end = struct
     type t =
         | Int32
+        | Float64
         | Boolean
         | Utf8
         | List of Field.t
@@ -64,6 +66,15 @@ end = struct
             ) in
             (i32_type, children)
 
+        let get_f64_field_type b =
+            let children = FbMessage.Field.Vector.create b [||] in
+            let f64_type = FbMessage.FloatingPoint.Builder.(
+                start b
+                |> add_precision FbMessage.Precision.double
+                |> finish
+            ) in
+            (f64_type, children)
+
         let get_bool_field_type b =
             let children = FbMessage.Field.Vector.create b [||] in
             let bool_type = FbMessage.Bool.Builder.(
@@ -103,6 +114,15 @@ end = struct
                     |> add_name field_name
                     |> add_nullable true
                     |> add_type__int field_type
+                    |> finish
+                )
+            | Datatype.Float64 ->
+                let field_type, _children = get_f64_field_type b in
+                FbMessage.Field.Builder.(
+                    start b
+                    |> add_name field_name
+                    |> add_nullable true
+                    |> add_type__floating_point field_type
                     |> finish
                 )
             | Datatype.Boolean ->
@@ -156,6 +176,15 @@ end = struct
             ) in
             (i32_type, children)
 
+        let get_f64_field_type b =
+            let children = FbFile.Field.Vector.create b [||] in
+            let f64_type = FbFile.FloatingPoint.Builder.(
+                start b
+                |> add_precision FbFile.Precision.double
+                |> finish
+            ) in
+            (f64_type, children)
+
         let get_bool_field_type b =
             let children = FbFile.Field.Vector.create b [||] in
             let bool_type = FbFile.Bool.Builder.(
@@ -196,6 +225,15 @@ end = struct
                     |> add_name field_name
                     |> add_nullable true
                     |> add_type__int field_type
+                    |> finish
+                )
+            | Datatype.Float64 ->
+                let field_type, _children = get_f64_field_type b in
+                FbFile.Field.Builder.(
+                    start b
+                    |> add_name field_name
+                    |> add_nullable true
+                    |> add_type__floating_point field_type
                     |> finish
                 )
             | Datatype.Boolean ->

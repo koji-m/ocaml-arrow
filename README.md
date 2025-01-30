@@ -72,9 +72,9 @@ dune exec write_record_batch_to_file
 
 python util.py read_file
 
-#    num1  num2    str1                    i32_list                                      struct1  bool1
-# 0   1.0   1.0   apple     [10.0, 20.0, nan, 40.0]  {'struct_num1': 10.0, 'struct_num2': 100.0}   True
-# 1   NaN   NaN    None  [100.0, nan, 300.0, 400.0]   {'struct_num1': 20.0, 'struct_num2': None}  False
-# 2   3.0   3.0  orange     [10.0, 20.0, nan, 40.0]  {'struct_num1': None, 'struct_num2': 300.0}   None
-# 3   4.0   4.0  banana  [100.0, nan, 300.0, 400.0]  {'struct_num1': 40.0, 'struct_num2': 400.0}   True
+#     i32    f64    str1                    i32_list                                      struct1  bool1
+# 0   1.0  3.140   apple     [10.0, 20.0, nan, 40.0]  {'struct_num1': 10.0, 'struct_num2': 100.0}   True
+# 1   NaN  2.718    None  [100.0, nan, 300.0, 400.0]   {'struct_num1': 20.0, 'struct_num2': None}  False
+# 2   3.0    NaN  orange     [10.0, 20.0, nan, 40.0]  {'struct_num1': None, 'struct_num2': 300.0}   None
+# 3   4.0  1.618  banana  [100.0, nan, 300.0, 400.0]  {'struct_num1': 40.0, 'struct_num2': 400.0}   True
 ```

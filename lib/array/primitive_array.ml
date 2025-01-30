@@ -89,3 +89,4 @@ module Primitive_array (Apt : Arrow_primitive_types.Arrow_primitive_type) = stru
 end
 
 module Int32_array = Primitive_array(Arrow_primitive_types.Int32_type)
+module Float64_array = Primitive_array(Arrow_primitive_types.Float64_type)
