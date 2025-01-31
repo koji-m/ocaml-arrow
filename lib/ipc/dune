@@ -1,11 +1,12 @@
 (include_subdirs no)
+
 (library
  (name arrow_ipc)
  (public_name arrow.ipc)
  (libraries
-   zarith
-   arrow.array
-   arrow.buffer
-   arrow.data
-   arrow.ipc.gen
-   arrow.schema))
+  zarith
+  arrow.array
+  arrow.buffer
+  arrow.data
+  arrow.ipc.gen
+  arrow.schema))

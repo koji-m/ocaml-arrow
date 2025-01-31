@@ -15,26 +15,16 @@ let of_boolean_array ba =
   let f i b =
     match b with
     | Some b ->
-      if b then
-        Boolean_buffer.set bool_buf i
-      else
-        ();
-      Null_buffer.set null_buf i
+        if b then Boolean_buffer.set bool_buf i else ();
+        Null_buffer.set null_buf i
     | None -> ()
   in
   Array.iteri f ba;
-  {
-    data_type = Datatype.Boolean;
-    values = bool_buf;
-    nulls = Some null_buf;
-  }
+  { data_type = Datatype.Boolean; values = bool_buf; nulls = Some null_buf }
 
 let data_type a = a.data_type
-
 let length a = Boolean_buffer.length a.values
-
 let values a = a.values.buffer (* ToDo *)
-
 let nulls a = a.nulls
 
 let to_data a =
@@ -42,11 +32,12 @@ let to_data a =
   let data_type_ = Datatype.Boolean in
   let nulls_ = a.nulls in
   let len = length a in
-  Array_data.({
-    data_type = data_type_;
-    buffers = [|buffer|];
-    nulls = nulls_;
-    child_data = [||];
-    len = len;
-    offset = 0 
-  })
+  Array_data.
+    {
+      data_type = data_type_;
+      buffers = [| buffer |];
+      nulls = nulls_;
+      child_data = [||];
+      len;
+      offset = 0;
+    }
