@@ -8,8 +8,10 @@ def read_batch():
     print(table.to_pandas())
 
 def write_batch():
-    arr = pa.array([1, 2, None, 4], type=pa.int32())
-    batch = pa.RecordBatch.from_arrays([arr, arr], names=["col1", "col2"])
+    arr1 = pa.array([1, 2, None, 4], type=pa.int32())
+    arr2 = pa.array([3.14, None, 2.718, 1.618], type=pa.float64())
+    batch = pa.RecordBatch.from_arrays([arr1, arr2], names=["col1", "col2"])
+    print(batch)
     writer = pa.ipc.new_stream(
         pa.output_stream(sys.stdout.buffer),
         batch.schema,

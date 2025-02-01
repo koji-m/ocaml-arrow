@@ -47,11 +47,11 @@ python util.py write | dune exec print_record_batch
 #   null,
 #   4,
 # ]
-# i32_array: [
-#   1,
-#   2,
+# f64_array: [
+#   3.140000,
 #   null,
-#   4,
+#   2.718000,
+#   1.618000,
 # ]
 
 # Example 2. write_back_record_batch

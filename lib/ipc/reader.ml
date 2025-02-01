@@ -37,31 +37,42 @@ module Array_reader = struct
     | None -> None
 end
 
+let get_primitive_array_bufs reader =
+  let null_buffer =
+    match Array_reader.next_buffer reader with
+    | Some buf -> buf
+    | None -> raise (Unexpected "null buffer not found")
+  in
+  let data_buffer =
+    match Array_reader.next_buffer reader with
+    | Some buf -> buf
+    | None -> raise (Unexpected "data buffer not found")
+  in
+  let node =
+    match Array_reader.next_node reader with
+    | Some node -> node
+    | _ -> raise (Unexpected "node not found")
+  in
+  let len, _ = node in
+  null_buffer, data_buffer, Int64.to_int len
+
 let create_array reader field =
   let data_type = Field.type_ field in
   match data_type with
   | Datatype.Int32 ->
-      let null_buffer =
-        match Array_reader.next_buffer reader with
-        | Some buf -> buf
-        | None -> raise (Unexpected "null buffer not found")
-      in
-      let data_buffer =
-        match Array_reader.next_buffer reader with
-        | Some buf -> buf
-        | None -> raise (Unexpected "data buffer not found")
-      in
-      let node =
-        match Array_reader.next_node reader with
-        | Some node -> node
-        | _ -> raise (Unexpected "node not found")
-      in
-      let len, _ = node in
+      let null_buffer, data_buffer, len = get_primitive_array_bufs reader in
       let arr =
-        Primitive_array.Int32_array.make (Int64.to_int len) data_buffer
+        Primitive_array.Int32_array.make len data_buffer
           null_buffer
       in
       Array_intf.Array ((module Primitive_array.Int32_array), arr)
+  | Datatype.Float64 ->
+      let null_buffer, data_buffer, len = get_primitive_array_bufs reader in
+      let arr =
+        Primitive_array.Float64_array.make len data_buffer
+          null_buffer
+      in
+      Array_intf.Array ((module Primitive_array.Float64_array), arr)
   | _ -> raise NotSupported
 
 let read_record_batch buf (b, rb) ver schema_ =
@@ -99,6 +110,13 @@ let fb_to_int_field b fb name_ =
   | 32, true -> Field.{ type_ = Datatype.Int32; name = name_ }
   | _ -> raise Datatype.NotSupported
 
+let fb_to_float_field b fb name_ =
+  let precision = FbMessage.FloatingPoint.precision b fb in
+  if precision = FbMessage.Precision.double then
+    Field.{ type_ = Datatype.Float64; name = name_ }
+  else
+    raise Datatype.NotSupported
+
 let fb_to_field b fb_field =
   let name =
     FbMessage.Field.name b fb_field
@@ -107,6 +125,7 @@ let fb_to_field b fb_field =
   in
   FbMessage.Field.type_
     ~int:(fun fb -> fb_to_int_field b fb name)
+    ~floating_point:(fun fb -> fb_to_float_field b fb name)
     ~default:(fun _typ -> raise Datatype.NotSupported)
     b fb_field
 
