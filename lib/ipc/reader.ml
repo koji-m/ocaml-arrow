@@ -92,16 +92,23 @@ let read_record_batch buf (b, rb) ver schema_ =
   in
   Record_batch.{ schema = schema_; columns = children }
 
+let fb_to_int_field b fb name_ =
+  let bit_width = FbMessage.Int.bit_width b fb |> Int32.to_int in
+  let signed = FbMessage.Int.is_signed b fb in
+  match bit_width, signed with
+  | 32, true -> Field.{ type_ = Datatype.Int32; name = name_ }
+  | _ -> raise Datatype.NotSupported
+
 let fb_to_field b fb_field =
-  let f_type = FbMessage.(Field.type_type b fb_field |> Type.to_string) in
-  let name_ =
+  let name =
     FbMessage.Field.name b fb_field
     |> FbMessageRt.Option.get
     |> FbMessageRt.String.to_string b
   in
-  match f_type with
-  | "int" -> Field.{ type_ = Datatype.Int32; name = name_ }
-  | _ -> raise Datatype.NotSupported
+  FbMessage.Field.type_
+    ~int:(fun fb -> fb_to_int_field b fb name)
+    ~default:(fun _typ -> raise Datatype.NotSupported)
+    b fb_field
 
 let fb_to_schema b fb_schema =
   let fields_ =
