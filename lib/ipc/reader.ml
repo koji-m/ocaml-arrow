@@ -63,6 +63,10 @@ let create_array reader field =
       let null_buffer, data_buffer, len = get_primitive_array_bufs reader in
       let arr = Primitive_array.Int32_array.make len data_buffer null_buffer in
       Array_intf.Array ((module Primitive_array.Int32_array), arr)
+  | Datatype.Int64 ->
+      let null_buffer, data_buffer, len = get_primitive_array_bufs reader in
+      let arr = Primitive_array.Int64_array.make len data_buffer null_buffer in
+      Array_intf.Array ((module Primitive_array.Int64_array), arr)
   | Datatype.Float64 ->
       let null_buffer, data_buffer, len = get_primitive_array_bufs reader in
       let arr =
@@ -104,6 +108,7 @@ let fb_to_int_field b fb name_ =
   let signed = FbMessage.Int.is_signed b fb in
   match (bit_width, signed) with
   | 32, true -> Field.{ type_ = Datatype.Int32; name = name_ }
+  | 64, true -> Field.{ type_ = Datatype.Int64; name = name_ }
   | _ -> raise Datatype.NotSupported
 
 let fb_to_float_field b fb name_ =

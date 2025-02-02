@@ -9,8 +9,9 @@ def read_batch():
 
 def write_batch():
     arr1 = pa.array([1, 2, None, 4], type=pa.int32())
-    arr2 = pa.array([3.14, None, 2.718, 1.618], type=pa.float64())
-    batch = pa.RecordBatch.from_arrays([arr1, arr2], names=["col1", "col2"])
+    arr2 = pa.array([10, 20, None, 40], type=pa.int64())
+    arr3 = pa.array([3.14, None, 2.718, 1.618], type=pa.float64())
+    batch = pa.RecordBatch.from_arrays([arr1, arr2, arr3], names=["col1", "col2", "col3"])
     print(batch)
     writer = pa.ipc.new_stream(
         pa.output_stream(sys.stdout.buffer),

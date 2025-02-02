@@ -59,11 +59,11 @@ python util.py write | dune exec print_record_batch
 # write back to stdout, print out the RecordBatch by pyarrow.
 python util.py write | dune exec write_back_record_batch | python util.py read
 
-#    col1  col2
-# 0   1.0   1.0
-# 1   4.0   4.0
-# 2   NaN   NaN
-# 3  16.0  16.0
+#    col1    col2      col3
+# 0   1.0   100.0  9.859600
+# 1   4.0   400.0       NaN
+# 2   NaN     NaN  7.387524
+# 3  16.0  1600.0  2.617924
 
 # Example 3. write_record_batch_to_file
 # Write RecordBatch (columns of int32, utf8, int32-list, struct, boolean) to file
