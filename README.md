@@ -47,6 +47,12 @@ python util.py write | dune exec print_record_batch
 #   null,
 #   4,
 # ]
+# i64_array: [
+#   10,
+#   20,
+#   null,
+#   40,
+# ]
 # f64_array: [
 #   3.140000,
 #   null,
