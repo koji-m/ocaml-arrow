@@ -54,23 +54,19 @@ let get_primitive_array_bufs reader =
     | _ -> raise (Unexpected "node not found")
   in
   let len, _ = node in
-  null_buffer, data_buffer, Int64.to_int len
+  (null_buffer, data_buffer, Int64.to_int len)
 
 let create_array reader field =
   let data_type = Field.type_ field in
   match data_type with
   | Datatype.Int32 ->
       let null_buffer, data_buffer, len = get_primitive_array_bufs reader in
-      let arr =
-        Primitive_array.Int32_array.make len data_buffer
-          null_buffer
-      in
+      let arr = Primitive_array.Int32_array.make len data_buffer null_buffer in
       Array_intf.Array ((module Primitive_array.Int32_array), arr)
   | Datatype.Float64 ->
       let null_buffer, data_buffer, len = get_primitive_array_bufs reader in
       let arr =
-        Primitive_array.Float64_array.make len data_buffer
-          null_buffer
+        Primitive_array.Float64_array.make len data_buffer null_buffer
       in
       Array_intf.Array ((module Primitive_array.Float64_array), arr)
   | _ -> raise NotSupported
@@ -106,7 +102,7 @@ let read_record_batch buf (b, rb) ver schema_ =
 let fb_to_int_field b fb name_ =
   let bit_width = FbMessage.Int.bit_width b fb |> Int32.to_int in
   let signed = FbMessage.Int.is_signed b fb in
-  match bit_width, signed with
+  match (bit_width, signed) with
   | 32, true -> Field.{ type_ = Datatype.Int32; name = name_ }
   | _ -> raise Datatype.NotSupported
 
@@ -114,8 +110,7 @@ let fb_to_float_field b fb name_ =
   let precision = FbMessage.FloatingPoint.precision b fb in
   if precision = FbMessage.Precision.double then
     Field.{ type_ = Datatype.Float64; name = name_ }
-  else
-    raise Datatype.NotSupported
+  else raise Datatype.NotSupported
 
 let fb_to_field b fb_field =
   let name =

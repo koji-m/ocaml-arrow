@@ -2,6 +2,10 @@ let i32_array =
   Arrow_array.Primitive_array.Int32_array.of_array
     [| Some 1l; None; Some 3l; Some 4l |]
 in
+let i64_array =
+  Arrow_array.Primitive_array.Int64_array.of_array
+    [| Some 10L; Some 20L; None; Some 40L |]
+in
 let f64_array =
   Arrow_array.Primitive_array.Float64_array.of_array
     [| Some 3.14; Some 2.718; None; Some 1.618 |]
@@ -55,6 +59,7 @@ let batch =
           fields =
             [|
               { type_ = Arrow_schema.Datatype.Int32; name = "i32" };
+              { type_ = Arrow_schema.Datatype.Int64; name = "i64" };
               { type_ = Arrow_schema.Datatype.Float64; name = "f64" };
               { type_ = Arrow_schema.Datatype.Utf8; name = "str1" };
               {
@@ -75,6 +80,8 @@ let batch =
         [|
           Arrow_array.Array_intf.Array
             ((module Arrow_array.Primitive_array.Int32_array), i32_array);
+          Arrow_array.Array_intf.Array
+            ((module Arrow_array.Primitive_array.Int64_array), i64_array);
           Arrow_array.Array_intf.Array
             ((module Arrow_array.Primitive_array.Float64_array), f64_array);
           Arrow_array.Array_intf.Array

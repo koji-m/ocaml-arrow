@@ -84,4 +84,5 @@ struct
 end
 
 module Int32_array = Primitive_array (Arrow_primitive_types.Int32_type)
+module Int64_array = Primitive_array (Arrow_primitive_types.Int64_type)
 module Float64_array = Primitive_array (Arrow_primitive_types.Float64_type)

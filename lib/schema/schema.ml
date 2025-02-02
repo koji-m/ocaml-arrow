@@ -6,6 +6,7 @@ module FbFile = Arrow_ipc_gen.File.Org.Apache.Arrow.Flatbuf
 module rec Datatype : sig
   type t =
     | Int32
+    | Int64
     | Float64
     | Boolean
     | Utf8
@@ -16,6 +17,7 @@ module rec Datatype : sig
 end = struct
   type t =
     | Int32
+    | Int64
     | Float64
     | Boolean
     | Utf8
@@ -51,13 +53,13 @@ end = struct
   let name f = f.name
 
   module Message = struct
-    let get_i32_field_type b =
+    let get_int_field_type b ~signed ~bit_width =
       let children = FbMessage.Field.Vector.create b [||] in
-      let i32_type =
+      let int_type =
         FbMessage.Int.Builder.(
-          start b |> add_is_signed true |> add_bit_width 32l |> finish)
+          start b |> add_is_signed signed |> add_bit_width bit_width |> finish)
       in
-      (i32_type, children)
+      (int_type, children)
 
     let get_f64_field_type b =
       let children = FbMessage.Field.Vector.create b [||] in
@@ -93,7 +95,16 @@ end = struct
       let field_name = FbMessageRt.String.create b field.name in
       match field.type_ with
       | Datatype.Int32 ->
-          let field_type, _children = get_i32_field_type b in
+          let field_type, _children =
+            get_int_field_type b ~signed:true ~bit_width:32l
+          in
+          FbMessage.Field.Builder.(
+            start b |> add_name field_name |> add_nullable true
+            |> add_type__int field_type |> finish)
+      | Datatype.Int64 ->
+          let field_type, _children =
+            get_int_field_type b ~signed:true ~bit_width:64l
+          in
           FbMessage.Field.Builder.(
             start b |> add_name field_name |> add_nullable true
             |> add_type__int field_type |> finish)
@@ -127,13 +138,13 @@ end = struct
   end
 
   module File = struct
-    let get_i32_field_type b =
+    let get_int_field_type b ~signed ~bit_width =
       let children = FbFile.Field.Vector.create b [||] in
-      let i32_type =
+      let int_type =
         FbFile.Int.Builder.(
-          start b |> add_is_signed true |> add_bit_width 32l |> finish)
+          start b |> add_is_signed signed |> add_bit_width bit_width |> finish)
       in
-      (i32_type, children)
+      (int_type, children)
 
     let get_f64_field_type b =
       let children = FbFile.Field.Vector.create b [||] in
@@ -169,7 +180,16 @@ end = struct
       let field_name = FbFileRt.String.create b field.name in
       match field.type_ with
       | Datatype.Int32 ->
-          let field_type, _children = get_i32_field_type b in
+          let field_type, _children =
+            get_int_field_type b ~signed:true ~bit_width:32l
+          in
+          FbFile.Field.Builder.(
+            start b |> add_name field_name |> add_nullable true
+            |> add_type__int field_type |> finish)
+      | Datatype.Int64 ->
+          let field_type, _children =
+            get_int_field_type b ~signed:true ~bit_width:64l
+          in
           FbFile.Field.Builder.(
             start b |> add_name field_name |> add_nullable true
             |> add_type__int field_type |> finish)

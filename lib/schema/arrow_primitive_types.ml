@@ -25,6 +25,22 @@ module Int32_type : Arrow_primitive_type with type native_t = int32 = struct
   let bytes_to_native (b : bytes) = Bytes.get_int32_le b 0
 end
 
+module Int64_type : Arrow_primitive_type with type native_t = int64 = struct
+  type native_t = int64
+
+  let byte_width = 8
+  let data_type = Datatype.Int64
+  let int_to_native i = Int64.of_int i
+
+  let native_to_bytes (i : native_t) =
+    let b = Bytes.create 8 in
+    Bytes.set_int64_le b 0 i;
+    b
+
+  let zero = 0L
+  let bytes_to_native (b : bytes) = Bytes.get_int64_le b 0
+end
+
 module Float64_type : Arrow_primitive_type with type native_t = float = struct
   type native_t = float
 

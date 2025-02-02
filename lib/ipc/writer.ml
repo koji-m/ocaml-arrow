@@ -92,6 +92,7 @@ end
 let layout data_type =
   match data_type with
   | Datatype.Int32 -> DataTypeLayout.make_fixed_width 4 64
+  | Datatype.Int64 -> DataTypeLayout.make_fixed_width 8 64
   | Datatype.Float64 -> DataTypeLayout.make_fixed_width 8 64
   | Datatype.Utf8 -> DataTypeLayout.make_variable_width 4 64
   | _ -> raise Datatype.NotSupported
@@ -185,7 +186,7 @@ let rec write_array_data (array_data : Array_data.t) buffers arrow_data nodes
   in
   let offset, buffers, nodes =
     match array_data.data_type with
-    | Datatype.Int32 | Datatype.Float64 ->
+    | Datatype.Int32 | Datatype.Int64 | Datatype.Float64 ->
         let buffer = array_data.buffers.(0) in
         let layout = layout array_data.data_type in
         let spec = layout.buffers.(0) in
