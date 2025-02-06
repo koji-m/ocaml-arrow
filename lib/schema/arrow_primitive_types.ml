@@ -59,3 +59,20 @@ module Float64_type : Arrow_primitive_type with type native_t = float = struct
   let bytes_to_native (b : bytes) =
     Bytes.get_int64_le b 0 |> Int64.float_of_bits
 end
+
+module Date64_type : Arrow_primitive_type with type native_t = int64 = struct
+  type native_t = int64
+
+  let byte_width = 8
+  let data_type = Datatype.Date64
+  let int_to_native i = Int64.of_int i
+
+  let native_to_bytes (i : native_t) =
+    let b = Bytes.create 8 in
+    Bytes.set_int64_le b 0 i;
+    b
+
+  let zero = 0L
+  let bytes_to_native (b : bytes) = Bytes.get_int64_le b 0
+end
+

@@ -8,6 +8,7 @@ module rec Datatype : sig
     | Int32
     | Int64
     | Float64
+    | Date64
     | Boolean
     | Utf8
     | List of Field.t
@@ -19,6 +20,7 @@ end = struct
     | Int32
     | Int64
     | Float64
+    | Date64
     | Boolean
     | Utf8
     | List of Field.t
@@ -69,6 +71,14 @@ end = struct
       in
       (f64_type, children)
 
+    let get_date_field_type b ~date_unit =
+      let children = FbMessage.Field.Vector.create b [||] in
+      let date_type =
+        FbMessage.Date.Builder.(
+          start b |> add_unit date_unit |> finish)
+      in
+      (date_type, children)
+
     let get_bool_field_type b =
       let children = FbMessage.Field.Vector.create b [||] in
       let bool_type = FbMessage.Bool.Builder.(start b |> finish) in
@@ -114,6 +124,13 @@ end = struct
             start b |> add_name field_name |> add_nullable true
             |> add_type__floating_point field_type
             |> finish)
+      | Datatype.Date64 ->
+          let field_type, _children =
+            get_date_field_type b ~date_unit:FbMessage.DateUnit.millisecond
+          in
+          FbMessage.Field.Builder.(
+            start b |> add_name field_name |> add_nullable true
+            |> add_type__date field_type |> finish)
       | Datatype.Boolean ->
           let field_type, _children = get_bool_field_type b in
           FbMessage.Field.Builder.(
@@ -153,6 +170,14 @@ end = struct
           start b |> add_precision FbFile.Precision.double |> finish)
       in
       (f64_type, children)
+
+    let get_date_field_type b ~date_unit =
+      let children = FbFile.Field.Vector.create b [||] in
+      let date_type =
+        FbFile.Date.Builder.(
+          start b |> add_unit date_unit |> finish)
+      in
+      (date_type, children)
 
     let get_bool_field_type b =
       let children = FbFile.Field.Vector.create b [||] in
@@ -199,6 +224,13 @@ end = struct
             start b |> add_name field_name |> add_nullable true
             |> add_type__floating_point field_type
             |> finish)
+      | Datatype.Date64 ->
+          let field_type, _children =
+            get_date_field_type b ~date_unit:FbFile.DateUnit.millisecond
+          in
+          FbFile.Field.Builder.(
+            start b |> add_name field_name |> add_nullable true
+            |> add_type__date field_type |> finish)
       | Datatype.Boolean ->
           let field_type, _children = get_bool_field_type b in
           FbFile.Field.Builder.(
