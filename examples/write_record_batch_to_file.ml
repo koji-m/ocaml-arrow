@@ -10,6 +10,10 @@ let f64_array =
   Arrow_array.Primitive_array.Float64_array.of_array
     [| Some 3.14; Some 2.718; None; Some 1.618 |]
 in
+let date32_array =
+  Arrow_array.Primitive_array.Date32_array.of_array
+    [| Some 20125l; Some 20126l; None; Some 20127l |]
+in
 let date64_array =
   Arrow_array.Primitive_array.Date64_array.of_array
     [| Some 1738843817707L; Some 1738844591882L; None; Some 1738844613584L |]
@@ -65,6 +69,7 @@ let batch =
               { type_ = Arrow_schema.Datatype.Int32; name = "i32" };
               { type_ = Arrow_schema.Datatype.Int64; name = "i64" };
               { type_ = Arrow_schema.Datatype.Float64; name = "f64" };
+              { type_ = Arrow_schema.Datatype.Date32; name = "date32" };
               { type_ = Arrow_schema.Datatype.Date64; name = "date64" };
               { type_ = Arrow_schema.Datatype.Utf8; name = "str1" };
               {
@@ -89,6 +94,8 @@ let batch =
             ((module Arrow_array.Primitive_array.Int64_array), i64_array);
           Arrow_array.Array_intf.Array
             ((module Arrow_array.Primitive_array.Float64_array), f64_array);
+          Arrow_array.Array_intf.Array
+            ((module Arrow_array.Primitive_array.Date32_array), date32_array);
           Arrow_array.Array_intf.Array
             ((module Arrow_array.Primitive_array.Date64_array), date64_array);
           Arrow_array.Array_intf.Array
