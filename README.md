@@ -59,6 +59,12 @@ python util.py write | dune exec print_record_batch
 #   2.718000,
 #   1.618000,
 # ]
+# date64_array: [
+#   2022-01-01 00:00:00,
+#   2023-04-10 00:00:00,
+#   2024-08-15 00:00:00,
+#   2025-02-09 00:00:00,
+# ]
 
 # Example 2. write_back_record_batch
 # Receive RecordBatch (two int32 columns) from pyarrow and squared all values,

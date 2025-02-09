@@ -1,3 +1,9 @@
+let format_time tm =
+  Printf.sprintf "%04d-%02d-%02d %02d:%02d:%02d" (tm.Unix.tm_year + 1900)
+    (tm.Unix.tm_mon + 1) tm.Unix.tm_mday tm.Unix.tm_hour tm.Unix.tm_min
+    tm.Unix.tm_sec
+in
+
 let print_record_batch batch =
   let cols = Arrow_array.Record_batch.columns batch in
 
@@ -38,6 +44,21 @@ let print_record_batch batch =
       | Some f -> Printf.printf "  %f,\n" f
       | None -> Printf.printf "  null, \n")
     f64_array;
+  Printf.printf "]\n";
+
+  let col = cols.(3) in
+  let date64_array =
+    Arrow_array.Primitive_array.Date64_array.(as_array col |> to_array)
+  in
+  Printf.printf "date64_array: [\n";
+  Array.iter
+    (fun i ->
+      match i with
+      | Some i ->
+          let dt = Unix.gmtime (Int64.to_float i /. 1000.) in
+          Printf.printf "  %s,\n" (format_time dt)
+      | None -> Printf.printf "  null, \n")
+    date64_array;
   Printf.printf "]\n"
 in
 

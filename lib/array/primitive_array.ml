@@ -15,11 +15,15 @@ struct
   exception PrimitiveArrayError of string
 
   let make len data_buf null_buf =
-    let null_buffer = Null_buffer.of_buffer null_buf len 0 in
+    let null_buffer =
+      match null_buf with
+      | Some buf -> Some (Null_buffer.of_buffer buf len 0)
+      | None -> None
+    in
     {
       data_type = Apt.data_type;
       values = Scalar_buffer.of_buffer data_buf;
-      nulls = Some null_buffer;
+      nulls = null_buffer;
     }
 
   let of_array (a : Apt.native_t option array) =
@@ -68,18 +72,22 @@ struct
 
   let to_array (arr : t) : Apt.native_t option array =
     let buffer = arr.values in
-    let nulls =
-      match arr.nulls with
-      | Some nulls -> nulls
-      | None -> raise (PrimitiveArrayError "no null buffer")
-    in
     let len = length arr in
     let native_arr = Array.make len None in
-    Array.mapi_inplace
-      (fun i _ ->
-        if Null_buffer.is_null nulls i then None
-        else Some (Scalar_buffer.get buffer i |> Apt.bytes_to_native))
-      native_arr;
+    let () =
+      match arr.nulls with
+      | Some nulls ->
+          Array.mapi_inplace
+            (fun i _ ->
+              if Null_buffer.is_null nulls i then None
+              else Some (Scalar_buffer.get buffer i |> Apt.bytes_to_native))
+            native_arr
+      | None ->
+          Array.mapi_inplace
+            (fun i _ ->
+              Some (Scalar_buffer.get buffer i |> Apt.bytes_to_native))
+            native_arr
+    in
     native_arr
 end
 

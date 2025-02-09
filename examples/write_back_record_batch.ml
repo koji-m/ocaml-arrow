@@ -47,9 +47,12 @@ let write_back_record_batch_to_stdout batch =
   in
 
   let res_cols = [| res_i32_col; res_i64_col; res_f64_col |] in
+  let org_schema = Arrow_array.Record_batch.schema batch in
+  let res_schema =
+    Arrow_schema.Schema.{ fields = Array.sub org_schema.fields 0 3 }
+  in
   let res_batch =
-    Arrow_array.Record_batch.
-      { schema = Arrow_array.Record_batch.schema batch; columns = res_cols }
+    Arrow_array.Record_batch.{ schema = res_schema; columns = res_cols }
   in
   let sw =
     Arrow_ipc.Writer.Writer.create Unix.stdout

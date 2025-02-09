@@ -32,17 +32,15 @@ module Array_reader = struct
   let next_buffer ar =
     match ar.buffers () with
     | Some (off, len) ->
-        Some
-          (Buffer.sub ar.data ~off:(Int64.to_int off) ~len:(Int64.to_int len))
+        if len = 0L then None
+        else
+          Some
+            (Buffer.sub ar.data ~off:(Int64.to_int off) ~len:(Int64.to_int len))
     | None -> None
 end
 
 let get_primitive_array_bufs reader =
-  let null_buffer =
-    match Array_reader.next_buffer reader with
-    | Some buf -> buf
-    | None -> raise (Unexpected "null buffer not found")
-  in
+  let null_buffer = Array_reader.next_buffer reader in
   let data_buffer =
     match Array_reader.next_buffer reader with
     | Some buf -> buf
@@ -73,6 +71,10 @@ let create_array reader field =
         Primitive_array.Float64_array.make len data_buffer null_buffer
       in
       Array_intf.Array ((module Primitive_array.Float64_array), arr)
+  | Datatype.Date64 ->
+      let null_buffer, data_buffer, len = get_primitive_array_bufs reader in
+      let arr = Primitive_array.Date64_array.make len data_buffer null_buffer in
+      Array_intf.Array ((module Primitive_array.Date64_array), arr)
   | _ -> raise NotSupported
 
 let read_record_batch buf (b, rb) ver schema_ =
@@ -117,6 +119,12 @@ let fb_to_float_field b fb name_ =
     Field.{ type_ = Datatype.Float64; name = name_ }
   else raise Datatype.NotSupported
 
+let fb_to_date_field b fb name_ =
+  let date_unit = FbMessage.Date.unit b fb in
+  if date_unit = FbMessage.DateUnit.millisecond then
+    Field.{ type_ = Datatype.Date64; name = name_ }
+  else raise Datatype.NotSupported
+
 let fb_to_field b fb_field =
   let name =
     FbMessage.Field.name b fb_field
@@ -126,6 +134,7 @@ let fb_to_field b fb_field =
   FbMessage.Field.type_
     ~int:(fun fb -> fb_to_int_field b fb name)
     ~floating_point:(fun fb -> fb_to_float_field b fb name)
+    ~date:(fun fb -> fb_to_date_field b fb name)
     ~default:(fun _typ -> raise Datatype.NotSupported)
     b fb_field
 
