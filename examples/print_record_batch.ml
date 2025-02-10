@@ -47,6 +47,21 @@ let print_record_batch batch =
   Printf.printf "]\n";
 
   let col = cols.(3) in
+  let date32_array =
+    Arrow_array.Primitive_array.Date32_array.(as_array col |> to_array)
+  in
+  Printf.printf "date32_array: [\n";
+  Array.iter
+    (fun i ->
+      match i with
+      | Some i ->
+          let dt = Unix.gmtime (Int32.to_float i *. 24. *. 3600.) in
+          Printf.printf "  %s,\n" (format_time dt)
+      | None -> Printf.printf "  null, \n")
+    date32_array;
+  Printf.printf "]\n";
+
+  let col = cols.(4) in
   let date64_array =
     Arrow_array.Primitive_array.Date64_array.(as_array col |> to_array)
   in

@@ -71,6 +71,10 @@ let create_array reader field =
         Primitive_array.Float64_array.make len data_buffer null_buffer
       in
       Array_intf.Array ((module Primitive_array.Float64_array), arr)
+  | Datatype.Date32 ->
+      let null_buffer, data_buffer, len = get_primitive_array_bufs reader in
+      let arr = Primitive_array.Date32_array.make len data_buffer null_buffer in
+      Array_intf.Array ((module Primitive_array.Date32_array), arr)
   | Datatype.Date64 ->
       let null_buffer, data_buffer, len = get_primitive_array_bufs reader in
       let arr = Primitive_array.Date64_array.make len data_buffer null_buffer in
@@ -123,6 +127,8 @@ let fb_to_date_field b fb name_ =
   let date_unit = FbMessage.Date.unit b fb in
   if date_unit = FbMessage.DateUnit.millisecond then
     Field.{ type_ = Datatype.Date64; name = name_ }
+  else if date_unit = FbMessage.DateUnit.day then
+    Field.{ type_ = Datatype.Date32; name = name_ }
   else raise Datatype.NotSupported
 
 let fb_to_field b fb_field =

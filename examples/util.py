@@ -14,11 +14,15 @@ def write_batch():
     arr3 = pa.array([3.14, None, 2.718, 1.618], type=pa.float64())
     arr4 = pa.array(
         [datetime(2022, 1, 1), datetime(2023, 4, 10), datetime(2024, 8, 15), datetime(2025, 2, 9)],
+        type=pa.date32(),
+    )
+    arr5 = pa.array(
+        [datetime(2022, 1, 1), datetime(2023, 4, 10), datetime(2024, 8, 15), datetime(2025, 2, 9)],
         type=pa.date64(),
     )
     print(arr3.buffers())
     print(arr4.buffers())
-    batch = pa.RecordBatch.from_arrays([arr1, arr2, arr3, arr4], names=["col1", "col2", "col3", "col4"])
+    batch = pa.RecordBatch.from_arrays([arr1, arr2, arr3, arr4, arr5], names=["col1", "col2", "col3", "col4", "col5"])
     print(batch)
     writer = pa.ipc.new_stream(
         pa.output_stream(sys.stdout.buffer),
