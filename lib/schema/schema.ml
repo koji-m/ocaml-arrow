@@ -3,6 +3,8 @@ module FbMessage = Arrow_ipc_gen.Message.Org.Apache.Arrow.Flatbuf
 module FbFileRt = Arrow_ipc_gen.File.Rt
 module FbFile = Arrow_ipc_gen.File.Org.Apache.Arrow.Flatbuf
 
+type time_unit = Second | Millisecond | Microsecond | Nanosecond
+
 module rec Datatype : sig
   type t =
     | Int32
@@ -10,6 +12,7 @@ module rec Datatype : sig
     | Float64
     | Date64
     | Date32
+    | Time32 of time_unit
     | Boolean
     | Utf8
     | List of Field.t
@@ -23,6 +26,7 @@ end = struct
     | Float64
     | Date64
     | Date32
+    | Time32 of time_unit
     | Boolean
     | Utf8
     | List of Field.t
@@ -79,6 +83,21 @@ end = struct
         FbMessage.Date.Builder.(start b |> add_unit date_unit |> finish)
       in
       (date_type, children)
+
+    let get_time_field_type b ~time_unit =
+      let tm_unit, bit_width =
+        match time_unit with
+        | Second -> (FbMessage.TimeUnit.second, 32l)
+        | Millisecond -> (FbMessage.TimeUnit.millisecond, 32l)
+        | Microsecond -> (FbMessage.TimeUnit.microsecond, 64l)
+        | Nanosecond -> (FbMessage.TimeUnit.nanosecond, 64l)
+      in
+      let children = FbMessage.Field.Vector.create b [||] in
+      let time_type =
+        FbMessage.Time.Builder.(
+          start b |> add_unit tm_unit |> add_bit_width bit_width |> finish)
+      in
+      (time_type, children)
 
     let get_bool_field_type b =
       let children = FbMessage.Field.Vector.create b [||] in
@@ -139,6 +158,13 @@ end = struct
           FbMessage.Field.Builder.(
             start b |> add_name field_name |> add_nullable true
             |> add_type__date field_type |> finish)
+      | Datatype.Time32 tm_unit ->
+          let field_type, _children =
+            get_time_field_type b ~time_unit:tm_unit
+          in
+          FbMessage.Field.Builder.(
+            start b |> add_name field_name |> add_nullable true
+            |> add_type__time field_type |> finish)
       | Datatype.Boolean ->
           let field_type, _children = get_bool_field_type b in
           FbMessage.Field.Builder.(
@@ -185,6 +211,21 @@ end = struct
         FbFile.Date.Builder.(start b |> add_unit date_unit |> finish)
       in
       (date_type, children)
+
+    let get_time_field_type b ~time_unit =
+      let tm_unit, bit_width =
+        match time_unit with
+        | Second -> (FbFile.TimeUnit.second, 32l)
+        | Millisecond -> (FbFile.TimeUnit.millisecond, 32l)
+        | Microsecond -> (FbFile.TimeUnit.microsecond, 64l)
+        | Nanosecond -> (FbFile.TimeUnit.nanosecond, 64l)
+      in
+      let children = FbFile.Field.Vector.create b [||] in
+      let time_type =
+        FbFile.Time.Builder.(
+          start b |> add_unit tm_unit |> add_bit_width bit_width |> finish)
+      in
+      (time_type, children)
 
     let get_bool_field_type b =
       let children = FbFile.Field.Vector.create b [||] in
@@ -245,6 +286,13 @@ end = struct
           FbFile.Field.Builder.(
             start b |> add_name field_name |> add_nullable true
             |> add_type__date field_type |> finish)
+      | Datatype.Time32 tm_unit ->
+          let field_type, _children =
+            get_time_field_type b ~time_unit:tm_unit
+          in
+          FbFile.Field.Builder.(
+            start b |> add_name field_name |> add_nullable true
+            |> add_type__time field_type |> finish)
       | Datatype.Boolean ->
           let field_type, _children = get_bool_field_type b in
           FbFile.Field.Builder.(

@@ -34,7 +34,7 @@ def write_batch():
 def read_batch_from_file():
     with open("example.arrow", "rb") as f:
         reader = pa.ipc.open_file(f)
-        print(reader.read_pandas())
+        print(reader.read_pandas().to_string())
 
 if __name__ == "__main__":
     arg = sys.argv[1]

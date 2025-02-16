@@ -91,3 +91,37 @@ module Date64_type : Arrow_primitive_type with type native_t = int64 = struct
   let zero = 0L
   let bytes_to_native (b : bytes) = Bytes.get_int64_le b 0
 end
+
+module Time32_second_type : Arrow_primitive_type with type native_t = int32 =
+struct
+  type native_t = int32
+
+  let byte_width = 4
+  let data_type = Datatype.Time32 Second
+  let int_to_native i = Int32.of_int i
+
+  let native_to_bytes (i : native_t) =
+    let b = Bytes.create 4 in
+    Bytes.set_int32_le b 0 i;
+    b
+
+  let zero = 0l
+  let bytes_to_native (b : bytes) = Bytes.get_int32_le b 0
+end
+
+module Time32_millisecond_type :
+  Arrow_primitive_type with type native_t = int32 = struct
+  type native_t = int32
+
+  let byte_width = 4
+  let data_type = Datatype.Time32 Millisecond
+  let int_to_native i = Int32.of_int i
+
+  let native_to_bytes (i : native_t) =
+    let b = Bytes.create 4 in
+    Bytes.set_int32_le b 0 i;
+    b
+
+  let zero = 0l
+  let bytes_to_native (b : bytes) = Bytes.get_int32_le b 0
+end

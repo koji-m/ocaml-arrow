@@ -18,6 +18,14 @@ let date64_array =
   Arrow_array.Primitive_array.Date64_array.of_array
     [| Some 1738843817707L; Some 1738844591882L; None; Some 1738844613584L |]
 in
+let time32_second_array =
+  Arrow_array.Primitive_array.Time32_second_array.of_array
+    [| Some 0l; Some 43200l; None; Some 86399l |]
+in
+let time32_millisecond_array =
+  Arrow_array.Primitive_array.Time32_millisecond_array.of_array
+    [| Some 0l; Some 43200000l; None; Some 86399000l |]
+in
 let str_array =
   Arrow_array.Generic_byte_array.of_string_array
     [| Some "apple"; None; Some "orange"; Some "banana" |]
@@ -71,6 +79,14 @@ let batch =
               { type_ = Arrow_schema.Datatype.Float64; name = "f64" };
               { type_ = Arrow_schema.Datatype.Date32; name = "date32" };
               { type_ = Arrow_schema.Datatype.Date64; name = "date64" };
+              {
+                type_ = Arrow_schema.(Datatype.Time32 Second);
+                name = "time32_sec";
+              };
+              {
+                type_ = Arrow_schema.(Datatype.Time32 Millisecond);
+                name = "time32_millisec";
+              };
               { type_ = Arrow_schema.Datatype.Utf8; name = "str1" };
               {
                 type_ =
@@ -98,6 +114,12 @@ let batch =
             ((module Arrow_array.Primitive_array.Date32_array), date32_array);
           Arrow_array.Array_intf.Array
             ((module Arrow_array.Primitive_array.Date64_array), date64_array);
+          Arrow_array.Array_intf.Array
+            ( (module Arrow_array.Primitive_array.Time32_second_array),
+              time32_second_array );
+          Arrow_array.Array_intf.Array
+            ( (module Arrow_array.Primitive_array.Time32_millisecond_array),
+              time32_millisecond_array );
           Arrow_array.Array_intf.Array
             ((module Arrow_array.Generic_byte_array), str_array);
           Arrow_array.Array_intf.Array

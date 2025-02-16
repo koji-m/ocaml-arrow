@@ -96,3 +96,9 @@ module Int64_array = Primitive_array (Arrow_primitive_types.Int64_type)
 module Float64_array = Primitive_array (Arrow_primitive_types.Float64_type)
 module Date32_array = Primitive_array (Arrow_primitive_types.Date32_type)
 module Date64_array = Primitive_array (Arrow_primitive_types.Date64_type)
+
+module Time32_second_array =
+  Primitive_array (Arrow_primitive_types.Time32_second_type)
+
+module Time32_millisecond_array =
+  Primitive_array (Arrow_primitive_types.Time32_millisecond_type)
