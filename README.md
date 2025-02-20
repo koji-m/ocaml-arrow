@@ -71,6 +71,7 @@ python util.py write | dune exec print_record_batch
 #   2024-08-15 00:00:00,
 #   2025-02-09 00:00:00,
 # ]
+# ...
 
 # Example 2. write_back_record_batch
 # Receive RecordBatch (two int32 columns) from pyarrow and squared all values,

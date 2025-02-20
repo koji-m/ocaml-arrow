@@ -79,6 +79,19 @@ let create_array reader field =
       let null_buffer, data_buffer, len = get_primitive_array_bufs reader in
       let arr = Primitive_array.Date64_array.make len data_buffer null_buffer in
       Array_intf.Array ((module Primitive_array.Date64_array), arr)
+  | Datatype.Time32 Second ->
+      let null_buffer, data_buffer, len = get_primitive_array_bufs reader in
+      let arr =
+        Primitive_array.Time32_second_array.make len data_buffer null_buffer
+      in
+      Array_intf.Array ((module Primitive_array.Time32_second_array), arr)
+  | Datatype.Time32 Millisecond ->
+      let null_buffer, data_buffer, len = get_primitive_array_bufs reader in
+      let arr =
+        Primitive_array.Time32_millisecond_array.make len data_buffer
+          null_buffer
+      in
+      Array_intf.Array ((module Primitive_array.Time32_millisecond_array), arr)
   | _ -> raise NotSupported
 
 let read_record_batch buf (b, rb) ver schema_ =
@@ -131,6 +144,14 @@ let fb_to_date_field b fb name_ =
     Field.{ type_ = Datatype.Date32; name = name_ }
   else raise Datatype.NotSupported
 
+let fb_to_time_field b fb name_ =
+  let time_unit = FbMessage.Time.unit b fb in
+  if time_unit = FbMessage.TimeUnit.second then
+    Field.{ type_ = Datatype.Time32 Second; name = name_ }
+  else if time_unit = FbMessage.TimeUnit.millisecond then
+    Field.{ type_ = Datatype.Time32 Millisecond; name = name_ }
+  else raise Datatype.NotSupported
+
 let fb_to_field b fb_field =
   let name =
     FbMessage.Field.name b fb_field
@@ -141,6 +162,7 @@ let fb_to_field b fb_field =
     ~int:(fun fb -> fb_to_int_field b fb name)
     ~floating_point:(fun fb -> fb_to_float_field b fb name)
     ~date:(fun fb -> fb_to_date_field b fb name)
+    ~time:(fun fb -> fb_to_time_field b fb name)
     ~default:(fun _typ -> raise Datatype.NotSupported)
     b fb_field
 

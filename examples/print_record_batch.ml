@@ -74,6 +74,33 @@ let print_record_batch batch =
           Printf.printf "  %s,\n" (format_time dt)
       | None -> Printf.printf "  null, \n")
     date64_array;
+  Printf.printf "]\n";
+
+  let col = cols.(5) in
+  let time32_second_array =
+    Arrow_array.Primitive_array.Time32_second_array.(as_array col |> to_array)
+  in
+  Printf.printf "time32_second_array: [\n";
+  Array.iter
+    (fun i ->
+      match i with
+      | Some i -> Printf.printf "  %i sec,\n" (Int32.to_int i)
+      | None -> Printf.printf "  null, \n")
+    time32_second_array;
+  Printf.printf "]\n";
+
+  let col = cols.(6) in
+  let time32_millisecond_array =
+    Arrow_array.Primitive_array.Time32_millisecond_array.(
+      as_array col |> to_array)
+  in
+  Printf.printf "time32_millisecond_array: [\n";
+  Array.iter
+    (fun i ->
+      match i with
+      | Some i -> Printf.printf "  %i milli sec,\n" (Int32.to_int i)
+      | None -> Printf.printf "  null, \n")
+    time32_millisecond_array;
   Printf.printf "]\n"
 in
 

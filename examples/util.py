@@ -20,9 +20,20 @@ def write_batch():
         [datetime(2022, 1, 1), datetime(2023, 4, 10), datetime(2024, 8, 15), datetime(2025, 2, 9)],
         type=pa.date64(),
     )
+    arr6 = pa.array(
+        [0, None, 43200, 86399],
+        type=pa.time32("s")
+    )
+    arr7 = pa.array(
+        [0, None, 43200000, 86399999],
+        type=pa.time32("ms")
+    )
     print(arr3.buffers())
     print(arr4.buffers())
-    batch = pa.RecordBatch.from_arrays([arr1, arr2, arr3, arr4, arr5], names=["col1", "col2", "col3", "col4", "col5"])
+    batch = pa.RecordBatch.from_arrays(
+        [arr1, arr2, arr3, arr4, arr5, arr6, arr7],
+        names=["col1", "col2", "col3", "col4", "col5", "col6", "col7"],
+    )
     print(batch)
     writer = pa.ipc.new_stream(
         pa.output_stream(sys.stdout.buffer),
